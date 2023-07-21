@@ -201,7 +201,7 @@ class nmap_yokia(Yokai):
         # 11. Send nmap banner results through searchsploit and redirect to txt
         return [
             BASH(f"nmap -Pn -sS -p- --open -vvv -d -T3 --min-rate 500 -oA {outputdir}/{basename}_nmap_tcp_all {target}"),
-            BASH(f"nmap -Pn -sU --top-ports 1000 -vvv -d --reason --max-retries 2 -T3 --min-rate 500 -oA {outputdir}/{basename}_nmap_udp_100 {target}"),
+            BASH(f"nmap -Pn -sU --top-ports 1000 -vvv -d --reason --max-retries 2 -T3 --min-rate 500 -oA {outputdir}/{basename}_nmap_udp_1000 {target}"),
             BASH(f"nmap -Pn -vvv -d --reason -O -sV --version-all -T4 --min-rate 1000 -oA {outputdir}/{basename}_versioning {target}"),
             BASH(f"nmap -Pn -vvv -d --reason -O -sV --script=banner -T4 --min-rate 1000 -oA {outputdir}/{basename}_banners {target}"),
             BASH(f"xsltproc {outputdir}/{basename}_nmap_tcp_all.xml -o {outputdir}/{basename}_nmap_tcp_all.html"),
