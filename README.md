@@ -15,6 +15,11 @@ The concept revolves around the creation of "Yokai Functions". Yokai Functions a
 - **BASH and PYTHON Wrappers**: Capture crucial information during command and function execution with Yokai's wrappers. Track start and finish times, stdout, stderr, and returned values for each executed task.
 - **ExecutionScheduler**: Yokai's `ExecutionScheduler` class empowers you to create sophisticated task execution schedules. Define rules for daily, weekly, or special date-based execution periods, and even specify periods with unlimited execution or no execution at all. If a command/function is already running when time changes to a no execution time, the `ExecutionScheduler` has the `Yokai` send a `SIGSTOP` to the process, halting the execution flow. When time switches back to allowed execution, the Yokai will send a `SIGCONT` to let the process continue where it left off.
 
+### WARNING: A Note on Security
+Because the YKI is deserialized with Pickle, there is **INSECURE DESERIALIZATION**. Do not load YKI you do not trust. Also, if you are passing arguments into you're Yokai Function and aren't providing input validation, you **WILL** end up with an **OS COMMAND INJECTIONS**. This script is what you make of it and acts more as an extension of the capabilities of python. But this is not something that you should be using to prop up a prod server or just let loose to run for months at a time unchecked. You can do a lot with Yokai, but use it safely and responsibly.
+
+To quote the Python mindset, "We are all consenting adults here."
+
 ## How to Install
 To keep it as simple and light-weight as possible, just save the `yokai.py` to your working directory and import it into any python file you want to make a yokai in. That's it!
 
