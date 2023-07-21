@@ -15,7 +15,7 @@ The concept revolves around the creation of "Yokai Functions". Yokai Functions a
 - **BASH and PYTHON Wrappers**: Capture crucial information during command and function execution with Yokai's wrappers. Track start and finish times, stdout, stderr, and returned values for each executed task.
 - **ExecutionScheduler**: Yokai's `ExecutionScheduler` class empowers you to create sophisticated task execution schedules. Define rules for daily, weekly, or special date-based execution periods, and even specify periods with unlimited execution or no execution at all. If a command/function is already running when time changes to a no execution time, the `ExecutionScheduler` has the `Yokai` send a `SIGSTOP` to the process, halting the execution flow. When time switches back to allowed execution, the Yokai will send a `SIGCONT` to let the process continue where it left off.
 
-## How to Use
+## How to Install
 To keep it as simple and light-weight as possible, just save the `yokai.py` to your working directory and import it into any python file you want to make a yokai in. That's it!
 
 ## Simple `Yokai` Usage Example
