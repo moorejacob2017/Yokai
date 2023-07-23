@@ -155,6 +155,7 @@ class ExecutionScheduler:
 #==========================================================================================================
 
 YOKAI_DIR = os.path.dirname(os.path.realpath(__file__))
+os.environ["PATH"] = f"{os.getenv('PATH')}:{YOKAI_DIR}/bin"
 
 #==========================================================================================================
 # BASH - Wrapper for storing Bash command information
@@ -502,16 +503,16 @@ class Yokai:
                 self.logger.info(f"\tStopped (SIGSTOP) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
             sleep(1)
 
-        p.join() # Wait for the process to complete
-
-        func.finished_at = datetime.now(self.scheduler.timezone)
-        self.logger.info(f"\tFinished at {func.finished_at} {self.scheduler.timezone}")
-
         while not q_stdout.empty():
             func.stdout = q_stdout.get()
         while not q_stderr.empty():
             func.stderr = q_stderr.get()
         while not q_return.empty():
             func.returned = q_return.get()
+
+        p.join() # Wait for the process to complete
+
+        func.finished_at = datetime.now(self.scheduler.timezone)
+        self.logger.info(f"\tFinished at {func.finished_at} {self.scheduler.timezone}")
 
         return func
