@@ -4,6 +4,7 @@ import json
 import pytz
 import dateutil.parser
 import pickle
+import select
 import subprocess
 import signal
 import logging
@@ -428,20 +429,52 @@ class Yokai:
 
         p = subprocess.Popen(cmd.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
+
+        # BLOCK_SIZE: Size of read buffer in to memory
+        # The larger this is, the faster the command runs
+        BLOCK_SIZE = 1048576
+
         executing = True
-        while p.poll() == None:
+        
+        dataend = False
+
+        while (p.returncode is None) or (not dataend):
+            p.poll()
+            dataend = False
+
             if self.scheduler.can_execute() and not executing:
-                os.kill(p.pid, signal.SIGCONT) # Send the SIGSTOP signal to the process
+                try:
+                    os.kill(p.pid, signal.SIGCONT) # Send the SIGSTOP signal to the process
+                    self.logger.info(f"\tContinuted (SIGCONT) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
+                except:
+                    pass
                 executing = True
-                self.logger.info(f"\tContinuted (SIGCONT) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
+                
             elif not self.scheduler.can_execute() and executing:
-                os.kill(p.pid, signal.SIGSTOP)
+                try:
+                    os.kill(p.pid, signal.SIGSTOP)
+                    self.logger.info(f"\tStopped (SIGSTOP) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
+                except:
+                    pass
                 executing = False
-                self.logger.info(f"\tStopped (SIGSTOP) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
+
+            elif executing:
+                ready = select.select([p.stdout, p.stderr], [], [], 1.0)
+
+                if p.stderr in ready[0]:
+                    data = bytes(p.stderr.read(BLOCK_SIZE), 'utf-8')
+                    if len(data) > 0:
+                        cmd.stderr += str(data, 'utf-8')
+
+                if p.stdout in ready[0]:
+                    data = bytes(p.stdout.read(BLOCK_SIZE), 'utf-8')
+                    if len(data) == 0: # Read of zero bytes means EOF
+                        dataend = True
+                    else:
+                        cmd.stdout += str(data, 'utf-8')
+
             sleep(1)
 
-
-        cmd.stdout, cmd.stderr = p.communicate()
         cmd.finished_at = datetime.now()
         self.logger.info(f"\tFinished at {cmd.finished_at} {self.scheduler.timezone}")
         
