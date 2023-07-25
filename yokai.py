@@ -7,6 +7,8 @@ import pickle
 import select
 import subprocess
 import signal
+import fcntl
+import errno
 import logging
 from io import StringIO
 from datetime import datetime, time
@@ -417,6 +419,18 @@ class Yokai:
         Returns:
             BASH: The updated BASH object with captured output.
         """
+
+        def set_fd_nonblocking(fd):
+            flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        def read_nonblocking(fd, block_size):
+            try:
+                return os.read(fd.fileno(), block_size)
+            except OSError as e:
+                if e.errno != errno.EAGAIN:
+                    raise
+                return b''
         
         self.logger.info(f"BASH command: {cmd.command}")
         if not self.scheduler.can_execute():
@@ -428,20 +442,17 @@ class Yokai:
         self.logger.info(f"\tStarted at {cmd.started_at} {self.scheduler.timezone}")
 
         p = subprocess.Popen(cmd.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
+        set_fd_nonblocking(p.stdout)
+        set_fd_nonblocking(p.stderr)
 
         # BLOCK_SIZE: Size of read buffer in to memory
         # The larger this is, the faster the command runs
         BLOCK_SIZE = 1048576
-
         executing = True
-        
-        dataend = False
+        sleep_time = 1 # Used for incremental sleeps to allow long runners better performance
 
-        while (p.returncode is None) or (not dataend):
-            p.poll()
-            dataend = False
-
+        p.poll()
+        while (p.returncode is None):
             if self.scheduler.can_execute() and not executing:
                 try:
                     os.kill(p.pid, signal.SIGCONT) # Send the SIGSTOP signal to the process
@@ -459,21 +470,37 @@ class Yokai:
                 executing = False
 
             elif executing:
-                ready = select.select([p.stdout, p.stderr], [], [], 1.0)
+                stdout_data = read_nonblocking(p.stdout, BLOCK_SIZE)
+                stderr_data = read_nonblocking(p.stderr, BLOCK_SIZE)
 
-                if p.stderr in ready[0]:
-                    data = bytes(p.stderr.read(BLOCK_SIZE), 'utf-8')
-                    if len(data) > 0:
-                        cmd.stderr += str(data, 'utf-8')
+                if stdout_data:
+                    cmd.stdout += stdout_data.decode('utf-8')
 
-                if p.stdout in ready[0]:
-                    data = bytes(p.stdout.read(BLOCK_SIZE), 'utf-8')
-                    if len(data) == 0: # Read of zero bytes means EOF
-                        dataend = True
-                    else:
-                        cmd.stdout += str(data, 'utf-8')
+                if stderr_data:
+                    cmd.stderr += stderr_data.decode('utf-8')
 
-            sleep(1)
+            p.poll()
+
+            if executing and p.returncode is None:
+                sleep(sleep_time) # Give extra time to send to stdout/stderr for long runners
+                if sleep_time < 60:
+                    sleep_time += 1
+            else:
+                sleep(1)
+            
+        while True:
+            stdout_data = read_nonblocking(p.stdout, BLOCK_SIZE)
+            stderr_data = read_nonblocking(p.stderr, BLOCK_SIZE)
+
+            if not stdout_data and not stderr_data:
+                break
+
+            if stdout_data:
+                cmd.stdout += stdout_data.decode('utf-8')
+
+            if stderr_data:
+                cmd.stderr += stderr_data.decode('utf-8')
+
 
         cmd.finished_at = datetime.now()
         self.logger.info(f"\tFinished at {cmd.finished_at} {self.scheduler.timezone}")
