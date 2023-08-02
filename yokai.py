@@ -331,13 +331,13 @@ class Yokai:
         obj.scheduler = kwargs.get('scheduler', ExecutionScheduler())  # Get the 'scheduler' argument or set it to None
         obj.log = kwargs.get('log', True)  # Get the 'log' argument or set it to True
         obj.logger = obj.__create_logger__()
-        obj.__setup__(*args, **kwargs)
 
         if 'scheduler' in kwargs.keys():
             kwargs.pop('scheduler')
         if 'log' in kwargs.keys():
             kwargs.pop('log')
 
+        obj.__setup__(*args, **kwargs)
         r = obj.__execute__(*args, **kwargs)
         obj.__clean__()
         return r
