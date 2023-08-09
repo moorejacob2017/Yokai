@@ -10,6 +10,8 @@ import signal
 import fcntl
 import errno
 import logging
+import string
+import random
 from io import StringIO
 from datetime import datetime, time
 from multiprocessing import Process, Queue
@@ -343,7 +345,11 @@ class Yokai:
         return r
     
     def __create_logger__(self):
-        logger = logging.getLogger(__name__)
+
+        logger = logging.getLogger(''.join(random.choice(string.hexdigits[:-6]) for _ in range(32)))
+
+        while(logger.hasHandlers()):
+            logger = logging.getLogger(''.join(random.choice(string.hexdigits[:-6]) for _ in range(32)))
         
         if self.log:
             logger.setLevel(logging.INFO)
