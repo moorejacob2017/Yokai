@@ -322,14 +322,10 @@ class Yokai:
 
     Subclasses of Yokai must implement the `__commands__` method, which should return a list of commands (BASH or PYTHON)
     to be executed.
-
-    Attributes:
-        tmp_files (list): A list of temporary files or directories that will be cleaned up after execution.
     """
 
     def __new__(cls, *args, **kwargs):
         obj = super().__new__(cls)
-        obj.tmp_files = []
         obj.scheduler = kwargs.get('scheduler', ExecutionScheduler())  # Get the 'scheduler' argument or set it to None
         obj.log = kwargs.get('log', True)  # Get the 'log' argument or set it to True
         obj.logger = obj.__create_logger__()
@@ -341,7 +337,7 @@ class Yokai:
 
         obj.__setup__(*args, **kwargs)
         r = obj.__execute__(*args, **kwargs)
-        obj.__clean__()
+        obj.__clean__(*args, **kwargs)
         return r
     
     def __create_logger__(self):
@@ -374,7 +370,7 @@ class Yokai:
         """
         Override this method in subclasses to perform setup operations before executing commands.
         """
-        self.tmp_files = []
+        return
 
     def __execute__(self, *args, **kwargs):
         """
@@ -392,15 +388,10 @@ class Yokai:
                 r.commands[i] = self.__run_python_function__(cmd)
         return r
 
-    def __clean__(self):
+    def __clean__(self, *args, **kwargs):
         """
-        Cleans up any temporary files or directories created during execution.
+        Override this method in subclasses to perform setup operations after executing commands.
         """
-        for t in self.tmp_files:
-            if os.path.isfile(t):
-                os.remove(t)
-            elif os.path.isdir(t):
-                os.rmdir(t)
         return
 
     def __commands__(self, *args, **kwargs):
