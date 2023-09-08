@@ -14,7 +14,7 @@ import string
 import random
 from io import StringIO
 from datetime import datetime, time
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Manager
 from time import sleep
 
 #==========================================================================================================
@@ -493,10 +493,10 @@ class Yokai:
                 break
 
             if stdout_data:
-                cmd.stdout += stdout_data.decode('utf-8')
+                cmd.stdout += stdout_data.decode('utf-8', 'ignore')
 
             if stderr_data:
-                cmd.stderr += stderr_data.decode('utf-8')
+                cmd.stderr += stderr_data.decode('utf-8', 'ignore')
 
 
         cmd.finished_at = datetime.now()
@@ -514,21 +514,28 @@ class Yokai:
         Returns:
             PYTHON: The updated PYTHON object with captured output.
         """
-
-        def proc_function(q_stdout, q_stderr, q_return):
-
+        
+        # Wrapper Function that goes around the passed in function
+        def proc_function(_func, _q_stdout, _q_stderr, _q_return, _executed_event):
             old_stdout = sys.stdout
             sys.stdout = str_buffer = StringIO()
 
             try:
-                q_return.put(func.function(*func.arguments, **func.kw_arguments))
+                ret = _func.function(*_func.arguments, **_func.kw_arguments)
+                err = None
             except Exception as e:
-                q_stderr.put(str(e))
+                err = str(e)
+                ret = None
+
             sys.stdout = old_stdout
 
-            q_stdout.put(str_buffer.getvalue())
-            #print(func.stdout)
-                
+            _executed_event.set()
+
+            _q_stderr.put(err)
+            _q_return.put(ret)
+            _q_stdout.put(str_buffer.getvalue())
+
+            return 0
 
         self.logger.info(f"PYTHON function: {func.function.__name__} ")
 
@@ -540,34 +547,57 @@ class Yokai:
         func.started_at = datetime.now(self.scheduler.timezone)
         self.logger.info(f"\tStarted at {func.started_at} {self.scheduler.timezone}")
 
-        q_stdout = Queue()
-        q_stderr = Queue()
-        q_return = Queue()
+        with Manager() as manager:
+            q_stdout = manager.Queue()
+            q_stderr = manager.Queue()
+            q_return = manager.Queue()
+            
+            executed_event = manager.Event() 
+            # The executed_event acts as a watch dog to prevent deadlocks on
+            # the managed queues. Theoretically, there should not be any
+            # deadlocks, but rare and unexplained deadlocks have occured with
+            # unmanaged queues. The executed_event signifies that the main
+            # purpose (the passed in python function) has finished and that
+            # the only thing left to do is to transfer outputs to the queues
+            # (one of the suspected areas where mystery deadlocks occured).
+            # After the func is executed, there is a 5 second gap to transfer
+            # the outputs to the queues before the run python_function exits.
+            # The other suspected spot of deadlock was the func itself. Originally
+            # the func was not passed in as an arg to proc_function, which could have
+            # caused a rare race condition to deadlock.
+            # Either way, in one situation where deadlock was consistantly occuring,
+            # the changes seem to have resolved it.
+            # In the event that the proc_function does not exit fully, and the
+            # __run_python_function__ exits prematurly, making the child process
+            # daemonic will cause it to also terminate when the main python process has
+            # terminated. Probably wont be an issue, even on long running yokai, but
+            # is something to make a note of.
 
-        # Create a new process
-        p = Process(target=proc_function, args=(q_stdout, q_stderr, q_return))
-        p.start() # Start the process
+            # Create a new process
+            p = Process(target=proc_function, args=(func, q_stdout, q_stderr, q_return, executed_event), daemon=True)
+            p.start() # Start the process
 
-        executing = True
-        while p.is_alive():
-            if self.scheduler.can_execute() and not executing:
-                os.kill(p.pid, signal.SIGCONT) # Send the SIGSTOP signal to the process
-                executing = True
-                self.logger.info(f"\tContinuted (SIGCONT) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
-            elif not self.scheduler.can_execute() and executing:
-                os.kill(p.pid, signal.SIGSTOP)
-                executing = False
-                self.logger.info(f"\tStopped (SIGSTOP) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
-            sleep(1)
+            executing = True
+            while p.is_alive() and not executed_event.is_set():
+                if self.scheduler.can_execute() and not executing:
+                    os.kill(p.pid, signal.SIGCONT) # Send the SIGCONT signal to the process
+                    executing = True
+                    self.logger.info(f"\tContinuted (SIGCONT) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
+                elif not self.scheduler.can_execute() and executing:
+                    os.kill(p.pid, signal.SIGSTOP)
+                    executing = False
+                    self.logger.info(f"\tStopped (SIGSTOP) at {datetime.now(self.scheduler.timezone)} {self.scheduler.timezone}")
+                sleep(1)
 
-        while not q_stdout.empty():
-            func.stdout = q_stdout.get()
-        while not q_stderr.empty():
-            func.stderr = q_stderr.get()
-        while not q_return.empty():
-            func.returned = q_return.get()
+            sleep(5)
+            while not q_stdout.empty():
+                func.stdout = q_stdout.get()
+            while not q_stderr.empty():
+                func.stderr = q_stderr.get()
+            while not q_return.empty():
+                func.returned = q_return.get()
 
-        p.join() # Wait for the process to complete
+            p.join() # Wait for the process to complete
 
         func.finished_at = datetime.now(self.scheduler.timezone)
         self.logger.info(f"\tFinished at {func.finished_at} {self.scheduler.timezone}")
