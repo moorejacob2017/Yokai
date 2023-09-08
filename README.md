@@ -232,8 +232,8 @@ if __name__ == "__main__":
 
 
 ## Advanced `Yokai` Usage Example for HTB Recon
-This is a complex Yokai example that is great for kicking of a box on Hack the Box and automates some basic recon
-!!! WORDLISTS NOT INCLUDED !!!
+This is a complex Yokai example that is great for kicking of a box on Hack the Box and automates some basic recon.
+#### WORDLISTS NOT INCLUDED!
 ```python
 #============================================================================
 # Imports 
