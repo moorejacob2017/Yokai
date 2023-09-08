@@ -335,7 +335,7 @@ class HTB_Recon_yokai(Yokai):
     def __execute__(self, target, basename='yokai', outputdir=f"{YOKAI_DIR}/output"):
 
 
-        # `r` is the results YKI that will be collect execution info
+        # `r` is the results YKI that will collect execution info
         # and will be returned upon completion.
         # The YKI here takes 2 arguments
         #   - The name of the Yokai Function as a string (self.__class__.__name__)
