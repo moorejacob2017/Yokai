@@ -339,7 +339,7 @@ class HTB_Recon_yokai(Yokai):
         # and will be returned upon completion.
         # The YKI here takes 2 arguments
         #   - The name of the Yokai Function as a string (self.__class__.__name__)
-        #   - The scheduler that is being used (in this cause, it is the default scheduler defined as self.scheduler)
+        #   - The scheduler that is being used (self.scheduler)
         r = YKI(self.__class__.__name__, self.scheduler)
 
 
