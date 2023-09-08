@@ -42,7 +42,7 @@
 
 
 
-Yokai is a light-weight script used to daemonize and automate your common tasks. It was made with the intent of being "brain-dead simple" and provides a solution for running repetitive tasks, enabling you to streamline your workflow and focus on more critical aspects of your projects. With Yokai, you can easily schedule and execute BASH commands or Python functions at specific times, on particular days, or during special periods. It simplifies the process of defining rules and conditions for task execution, giving you full control over when and how your tasks run.
+Yokai is a light-weight script used to daemonize and automate your common tasks. It was made with the intent of being relatively simple and provides a solution for running repetitive tasks, enabling you to streamline your workflow and focus on more critical aspects of your projects. With Yokai, you can easily schedule and execute BASH commands or Python functions at specific times, on particular days, or during special periods. It simplifies the process of defining rules and conditions for task execution, giving you full control over when and how your tasks run.
 
 The extent of Yokai's usage is only limited to the tools you use and the commands you give it. So feel free to get creative with it!
 
