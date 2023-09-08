@@ -334,6 +334,30 @@ class HTB_Recon_yokai(Yokai):
     # being handled automatically
     def __execute__(self, target, basename='yokai', outputdir=f"{YOKAI_DIR}/output"):
 
+        # COMMANDS (Run as root!):
+        # 1.  nmap TCP all ports
+        # 2.  convert nmap TCP xml to clean html
+        # 3.  nmap UDP top 1000 ports
+        # 4.  convert nmap UDP xml to clean html
+        # 5.  Parse TCP results to get specific ports
+        # 6.  Parse UDP results to get specific ports
+        # 7.  Get live hosts from TCP results
+        # 8.  Get live hosts from UDP results
+        # 9.  nmap versioning open ports
+        # 10. Convert nmap versioning xml to clean html
+        # 11. nmap banners open ports
+        # 12. Convert nmap banner xml to clean html
+        # 13. nmap nse open ports
+        # 14. convert nmap banner xml to clean html
+        # 15. Send nmap versioning results through searchsploit and redirect to txt
+        # 16. Send nmap banner results through searchsploit and redirect to txt
+        # 17. Send nmap nse results through searchsploit and redirect to txt
+        # 18. Check for any ports that support HTTP/S
+        # 19. Run whatweb against live urls
+        # 20. Run vhost enum against live urls
+        # 21. Run dirbust with 3 different wordlists and ffuf against live urls
+        # 22. Parse out the ffuf json to csv
+
 
         # `r` is the results YKI that will collect execution info
         # and will be returned upon completion.
